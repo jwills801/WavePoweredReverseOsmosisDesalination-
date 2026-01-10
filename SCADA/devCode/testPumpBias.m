@@ -6,13 +6,17 @@ for i = 1:numel(f)
     F(i) = mean([f1(i),f2(i)]);
 end
 
-figure
-plot(f,f1)
+figure('Units','inches','Position',[1 1 4.5 4]) % Size the figure for a single column report
+plot(f,f1,'LineWidth',2,'Color','b','DisplayName','pump a')
 hold on
-plot(f,f2)
-plot(f,F)
+plot(f,f2,'LineWidth',2,'Color','r','DisplayName','pump b')
+plot(f,F,'LineWidth',2,'Color','k','DisplayName','combined flow')
 grid on
-legend('f1','f2','F')
+legend('show','Location','best')
+xlabel('target total fractional displacement')
+ylabel('resultant fractional displacement')
+title({'Plot of Effective Fractional Displacement'; 'via Blended Pump Displacements'})
+set(gca,'FontSize',10,'FontName','times')
 
 function [f1,f2] = fcn(f,HIL_H1T_P1fBias,HIL_H1T_P2fBias)
     P1 = -HIL_H1T_P1fBias;
