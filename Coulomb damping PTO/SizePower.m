@@ -75,7 +75,7 @@ saveas(gcf,['figures/figs/', fileNameString,'.fig'])
 figure, plot(powCutOff/1e3,(max(TotalAvePow)-TotalAvePow)/1e3), grid
 xlabel('Power Cutoff [kW]')
 ylabel('Loss in Annual Power Power [kW]')
-fileNameString = 'PowerCutoff';
+fileNameString = 'LossFromPowerCutoff';
 saveas(gcf,['figures/pngs/', fileNameString,'.png'])
 saveas(gcf,['figures/figs/', fileNameString,'.fig'])
 
