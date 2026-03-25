@@ -53,7 +53,7 @@ par.MaxStep = 1e-2;
 % Sea State and Wave construction parameters
 Hs = [2.34 2.64 5.36 2.05 5.84 3.25];
 Tp = [7.31 9.86 11.52 12.71 15.23 16.5];
-seaStateInd =1;
+seaStateInd =5;
 par.wave.Hs = Hs(seaStateInd);
 par.wave.Tp = Tp(seaStateInd);
 par.WEC.nw = 1000; % num. of frequency components for harmonic superposition 
@@ -74,10 +74,11 @@ y0 = [  0, ...
         zeros(1,par.WEC.ny_rad)];
 
 % Define torque values to try
-Tvals = linspace(4,4,1)*1e6; % [Nm] PTO reaction torque
+Tvals = linspace(0,20,21)*1e6; % [Nm] PTO reaction torque
 
 % Initialize average power vector
 P = NaN(size(Tvals));
+posContraint = zeros(size(Tvals));
 
 %% Loop over torque values (grid search)
 for Tind = 1:length(Tvals)
@@ -94,10 +95,18 @@ toc
 
 % Average power
 P(Tind) = mean(-out.T_pto(:).*out.theta_dot(:));
+
+% If position constraints are not met, make this infeasibile
+if max(out.theta*180/pi)>45
+    posContraint(Tind) = 1;
+end
 end
 
 figure
 plot(Tvals,P), xlabel('PTO Torque'), ylabel('Average Power')
+
+figure
+plot(Tvals,posContraint), xlabel('PTO Torque'), ylabel('Violated Position constraints')
 
 % Optimal Torque
 [Popt,TindOpt] = max(P);
@@ -116,6 +125,20 @@ disp(['Hs: ', num2str(par.wave.Hs), ', Tp: ', num2str(par.wave.Tp), 'Nm , Topt: 
 % Hs: 5.84, Tp: 15.23, Topt: 6e6Nm, Power: 1250kW
 % Hs: 3.25, Tp: 16.5, Topt: 3e6Nm, Power: 450kW
 
+% Results from Jeremys study (data_coulombPTO_dampingStudy_6SS_20230724_slim.mat)
+    % for i =1:6
+    %     figure
+    %     plot(T_c_data(i,:)/1e6,PP_w_data(i,:)/1e3)
+    %     ylabel('Power [kW]'), xlabel('Torque [MNm]')
+    %     title(['Hs = ', num2str(Hs(i)), ', Ts = ', num2str(Tp(i))])
+    % end
+% Hs: 2.34, Tp: 7.31, Topt: 4.9e6Nm, Power: 200kW
+% Hs: 2.64, Tp: 9.86, Topt: 4.4e6Nm, Power: 340kW
+% Hs: 5.36, Tp: 11.52, Topt: 7.7e6Nm, Power: 1590kW
+% Hs: 2.05, Tp: 12.71, Topt: 2e6Nm, Power: 270kW
+% Hs: 5.84, Tp: 15.23, Topt: 6.8e6Nm, Power: 1570kW
+% Hs: 3.25, Tp: 16.5, Topt: 3.5e6Nm, Power: 600kW    
+
 
 %% %%%%%%%%%%%%   PLOTTING Individual Runs  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 figure
@@ -126,7 +149,7 @@ title('Wave Elevation')
 
 %%
 figure
-plot(out.t,out.theta)
+plot(out.t,out.theta*180/pi)
 xlabel('time (s)')
 ylabel('position (rad)')
 % ylim([-pi/2 pi/2])
