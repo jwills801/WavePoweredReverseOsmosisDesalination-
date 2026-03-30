@@ -128,9 +128,9 @@ function par = parameters_HIL(par)
     par.charge.cq = -9.58e10; % [Pa/(m^3/s)^(1/2)]
     
     % Pressure control gains
-    par.charge.kp = 1;
-    par.charge.ki = 1;
-    par.charge.kd = 0;
+    par.charge.kp = par.charge.nMax/5e6;
+    par.charge.ki = par.charge.kp;
+    % par.charge.kd = 0;
 
     %% Motor/Gen. Control
     % Speed limits of motor and generator
