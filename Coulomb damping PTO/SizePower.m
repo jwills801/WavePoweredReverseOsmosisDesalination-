@@ -54,36 +54,49 @@ end
 avePowContribution = avePowOpt.*weight/100; % Divide by 100 because the weights are percentages
 
 % Successivly cut off powers
-powCutOff = linspace(0,max(avePowOpt),100);
-TotalAvePow = NaN(size(powCutOff));
-for j = 1:length(powCutOff)
+powCutOff_vec = linspace(0,max(avePowOpt),100);
+TotalAvePow = NaN(size(powCutOff_vec));
+for j = 1:length(powCutOff_vec)
     tmp = avePowOpt;
-    tmp( avePowOpt>powCutOff(j) ) = powCutOff(j);
+    tmp( avePowOpt>powCutOff_vec(j) ) = powCutOff_vec(j);
     TotalAvePow(j)= sum(tmp.*weight/100);
 end
+
+%% Cut off at 500 kW
+powCutOff = 500e3;
+maxTorque = 5e6;
+
+% if the power is less than the cutoff, keep things the same
+avePowCutOff = avePowOpt;
+torqueCutOff = torqueOpt;
+
+% if the power is more than the cutoff, make it the cutoff,and make P high
+avePowCutOff( avePowOpt>powCutOff ) = powCutOff;
+torqueCutOff( avePowOpt>powCutOff ) = maxTorque;
+
+% Save data for Sayak
+save('cutOffPOWandTOR.mat','Tp','Hs','avePowCutOff',"torqueCutOff")
 
 %% Plots
 
 % Power cutoff plots
-figure, plot(powCutOff/1e3,TotalAvePow/1e3), grid
+figure, plot(powCutOff_vec/1e3,TotalAvePow/1e3), grid
 xlabel('Power Cutoff [kW]')
 ylabel('Annual Power Power [kW]')
 fileNameString = 'PowerCutoff';
-saveas(gcf,['figures/pngs/', fileNameString,'.png'])
 saveas(gcf,['figures/figs/', fileNameString,'.fig'])
+exportgraphics(gcf, ['figures/pngs/', fileNameString,'.png']);
 
-figure, plot(powCutOff/1e3,(max(TotalAvePow)-TotalAvePow)/1e3), grid
+figure, plot(powCutOff_vec/1e3,(max(TotalAvePow)-TotalAvePow)/1e3), grid
 xlabel('Power Cutoff [kW]')
 ylabel('Loss in Annual Power Power [kW]')
 fileNameString = 'LossFromPowerCutoff';
-saveas(gcf,['figures/pngs/', fileNameString,'.png'])
 saveas(gcf,['figures/figs/', fileNameString,'.fig'])
-
+exportgraphics(gcf, ['figures/pngs/', fileNameString,'.png']);
 
 % Joint probabilities
 plotJointProb = makeHeatMap(Tp,Hs,weight,'Peak Period [s]','Significant Wave Height [m]','Joint Probability');
 saveas(plotJointProb,'Barchart.png')
-
 
 % Optimal Powers
 plotOptPow = makeHeatMap(Tp,Hs,avePowOpt/1e6,'Peak Period [s]','Significant Wave Height [m]','Average Power [MW]');
@@ -91,8 +104,14 @@ plotOptPow = makeHeatMap(Tp,Hs,avePowOpt/1e6,'Peak Period [s]','Significant Wave
 % Optimal Torques
 plotOptTorque = makeHeatMap(Tp,Hs,torqueOpt/1e6,'Peak Period [s]','Significant Wave Height [m]','Best PTO Torque [MNm]');
 
-% Optimal Torques
+% Annual Power Contribution
 plotPowContribution = makeHeatMap(Tp,Hs,avePowContribution/1e3,'Peak Period [s]','Significant Wave Height [m]','Contribution to Annual Average Power [kW]');
+
+% Cutoff Powers
+plotCutOffPow = makeHeatMap(Tp,Hs,avePowCutOff/1e3,'Peak Period [s]','Significant Wave Height [m]',['Average Power (kW) after ',num2str(powCutOff/1e3),'kW Cutoff ']);
+
+% Cutoff Torques
+plotCutOffTorque = makeHeatMap(Tp,Hs,torqueCutOff/1e6,'Peak Period [s]','Significant Wave Height [m]',['PTO Torque (MNm) after ',num2str(powCutOff/1e3),'kW Cutoff']);
 
 function h = makeHeatMap(x,y,z,x_name,y_name,z_name)
 figure
@@ -119,6 +138,6 @@ fileNameString = z_name(~isspace(z_name));
 fileNameString(find(fileNameString=='['):end)='';
 
 % Save figures
-saveas(h,['figures/pngs/', fileNameString,'.png'])
 saveas(h,['figures/figs/', fileNameString,'.fig'])
+exportgraphics(h, ['figures/pngs/', fileNameString,'.png']);
 end
