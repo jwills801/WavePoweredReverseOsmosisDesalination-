@@ -39,9 +39,8 @@ function par = parameters_HIL(par)
     par.WECpump.positiveLimit = (9)*0.0254; % [in -> m] positive extent of travel limit
     par.WECpump.negativeLimit = -(9)*0.0254; % [in -> m] negative extent of travel limit
 
-    par.WECpump.positiveCtrlLimit = (10 ...
-)*0.0254; % [in -> m] positive extent of travel limit for control
-    par.WECpump.negativeCtrlLimit = -(10)*0.0254; % [in -> m] negative extent of travel limit for control
+    par.WECpump.positiveCtrlLimit = (10-2)*0.0254; % [in -> m] positive extent of travel limit for control
+    par.WECpump.negativeCtrlLimit = -(10-2)*0.0254; % [in -> m] negative extent of travel limit for control
 
     % conversion of angular to linear motion and force: reference scale vs.
     % HIL system
@@ -86,7 +85,7 @@ function par = parameters_HIL(par)
     switch 1
         case 1 % P
             par.H1T.kp = ku*(0.5);
-            par.H1T.ki = ku/Tu*(0);
+            par.H1T.ki = ku/Tu*(0.1);
             par.H1T.kd = ku*Tu*(0);
         case 2 % PI
             par.H1T.kp = ku*(0.45);

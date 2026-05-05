@@ -34,11 +34,12 @@
 % UPDATES:
 % 03/25/2026 - Created, looked at max power
 % 04/08/2026 - changed to look at max speeds and torque
+% 04/16/2026 - Adjusted saturated operating conditions
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear, close all
 
-saveFigs = 1;
+saveFigs = 0;
 
 % Load power data
 load('data_coulombPTO_dampingStudy_20220927_slim.mat')
@@ -46,9 +47,9 @@ load('data_coulombPTO_dampingStudy_20220927_slim.mat')
 % Find peak power at each sea condition
 avePowOpt = NaN(size(weight));
 torqueOpt = NaN(size(weight));
-for i = 1:length(Hs)
-    [avePowOpt(i),torqueIndOpt] = max(PP_w_data(i,:));
-    torqueOpt(i) = T_c_data(i,torqueIndOpt);
+for cutInd = 1:length(Hs)
+    [avePowOpt(cutInd),torqueIndOpt] = max(PP_w_data(cutInd,:));
+    torqueOpt(cutInd) = T_c_data(cutInd,torqueIndOpt);
 end
 
 % Calculate Contribution to Annual Average Power
@@ -74,60 +75,77 @@ maxTorques = linspace(min(torqueOpt(:)),max(torqueOpt(:)),nT);
 TotalAvePow = NaN(size(S));
 
 % Loop over grid values of max speeds and torques
-for i = 1:nS*nT
-    % Saturate speed
-    speed = aveSpeed;
-    speed(speed>S(i)) = S(i);
+for cutInd = 1:nS*nT
+    % Max speeds and torques
+    maxSpeed = S(cutInd);
+    maxTorque = T(cutInd);
 
-    % Saturate torque
-    torque = torqueOpt;
-    torque(torque>T(i)) = T(i);
+    % initialize 
+    powCut = NaN(size(weight));
+    for seaInd = 1:length(weight)
+        % Get grid search data
+        powerData = PP_w_data(seaInd,:);
+        torqueData = T_c_data(seaInd,:);
+
+        % Get operating conditions for this sea state
+        [powCut(seaInd),torCut,speCut] = cutTorque_and_Speed(powerData,torqueData,maxSpeed,maxTorque);     
+    end
 
     % Calculate Contribution to Annual Average Power
-    TotalAvePow(i) = sum(speed .* torque .*weight/100); % Divide by 100 because the weights are percentages
+    TotalAvePow(cutInd) = sum(powCut .*weight/100); % Divide by 100 because the weights are percentages
 end
 
 %% Cut off at a specific speed and torque
-maxSpeed = 1/60*2*pi; % 1 RPM converted to rad/s
-maxTorque = 3.5e6;
+maxSpeed = 1 /60*2*pi; % 1 RPM converted to rad/s
+maxTorque = 3e6;
 
-% if the torque and speeds are less than the cutoff, keep things the same
-speedCutOff = aveSpeed;
-torqueCutOff = torqueOpt;
+% Initilize vectors
+powerCutOff = NaN(size(weight));
+torqueCutOff = NaN(size(weight));
+speedCutOff = NaN(size(weight));
 
-% if the power is more than the cutoff, make it the cutoff,and make P high
-speedCutOff( speedCutOff>maxSpeed ) = maxSpeed;
-torqueCutOff( torqueCutOff>maxTorque ) = maxTorque;
+% Loop over sea states
+    for seaInd = 1:length(weight)
+        % Get grid search data
+        powerData = PP_w_data(seaInd,:);
+        torqueData = T_c_data(seaInd,:);
 
-powerCutOff = speedCutOff .* torqueCutOff;
+        % Get operating conditions for this sea state
+        [powerCutOff(seaInd),torqueCutOff(seaInd),speedCutOff(seaInd)] = cutTorque_and_Speed(powerData,torqueData,maxSpeed,maxTorque);     
+    end
+totalAvePowCut = sum(powerCutOff .*weight/100); % Divide by 100 because the weights are percentages
 
 % Save data for Sayak
-save('cutoffTorque_and_Speed.mat','Tp','Hs','speedCutOff',"torqueCutOff","powerCutOff")
+% save('cutoffTorque_and_Speed.mat','Tp','Hs','speedCutOff',"torqueCutOff","powerCutOff")
 
 %% Plots
 
 % Power cutoff plots
-figure, surf(S*60/2/pi,T/1e6,TotalAvePow/1e3)
+levels = [50 100 150 200 250, (.99*max(TotalAvePow(:)/1e3)), totalAvePowCut/1e3];
+figure, contour(S*60/2/pi,T/1e6,TotalAvePow/1e3,levels,'ShowText','on',"LabelFormat","%1.f kW")
+hold on, plot([min(S(:)), max(S(:))]*60/2/pi,[maxTorque,maxTorque]/1e6,'k--')
+plot([maxSpeed,maxSpeed]*60/2/pi,[min(T(:)), max(T(:))]/1e6,'k--')
+%scatter(maxSpeed*60/2/pi,maxTorque/1e6,500,"r.")
+% annotation('textbox',[.5 .175 .3 .3],'String',['Annual Average Power: ', num2str(totalAvePowCut/1e3,'%1.f'),' kW'],'FitBoxToText','on','Color', 'red','EdgeColor', 'none');
 xlabel('Max Speed [RPM]')
 ylabel('Max Torque [MNm]')
-zlabel('Yearly Average Power [kW]')
 fileNameString = 'Torque_and_SpeedCutoff';
 if saveFigs
     saveas(gcf,['figures/figs/', fileNameString,'.fig'])
     exportgraphics(gcf, ['figures/pngs/', fileNameString,'.png']);
 end
-
+%%
 % Joint probabilities
 plotJointProb = makeHeatMap(Tp,Hs,weight,'Peak Period [s]','Significant Wave Height [m]','Joint Probability',saveFigs);
 
 % Optimal Powers
-plotOptPow = makeHeatMap(Tp,Hs,avePowOpt/1e3,'Peak Period [s]','Significant Wave Height [m]','Average Power [kW]',saveFigs);
+plotOptPow = makeHeatMap(Tp,Hs,avePowOpt/1e3,'Peak Period [s]','Significant Wave Height [m]','Unstaturated Average Power [kW]',saveFigs);
 
 % Optimal Torques
-plotOptTorque = makeHeatMap(Tp,Hs,torqueOpt/1e6,'Peak Period [s]','Significant Wave Height [m]','Best PTO Torque [MNm]',saveFigs);
+plotOptTorque = makeHeatMap(Tp,Hs,torqueOpt/1e6,'Peak Period [s]','Significant Wave Height [m]','Unstaturated Best PTO Torque [MNm]',saveFigs);
 
 % Annual Power Contribution
-plotPowContribution = makeHeatMap(Tp,Hs,avePowContribution/1e3,'Peak Period [s]','Significant Wave Height [m]','Contribution to Annual Average Power [kW]',saveFigs);
+plotPowContribution = makeHeatMap(Tp,Hs,avePowContribution/1e3,'Peak Period [s]','Significant Wave Height [m]','Unstaturated Contribution to Annual Average Power [kW]',saveFigs);
 
 % Cutoff Speeds
 plotCutOffSpeed = makeHeatMap(Tp,Hs,speedCutOff*60/2/pi,'Peak Period [s]','Significant Wave Height [m]',['Average Speed (RPM) after ',num2str(maxSpeed*60/2/pi),'RPM Cutoff '],saveFigs);
@@ -165,6 +183,43 @@ fileNameString(find(fileNameString=='['):end)='';
 if saveFigs
     saveas(h,['figures/figs/', fileNameString,'.fig'])
     exportgraphics(h, ['figures/pngs/', fileNameString,'.png']);
+end
+
+end
+
+
+function [powCut,torCut,speCut] = cutTorque_and_Speed(powerData,torqueData,maxSpeed,maxTorque)
+% powerData and torqueData are vectors at a specific sea state showing the
+% relationship between control torque and absorbed power.
+% If we cut off the speed and torque, what will the power be?
+powerData4Plot = powerData;
+
+% Calculate speed
+speedData = powerData./torqueData;
+
+% Disallow over torquing and over speeding
+allowedInds = torqueData<maxTorque & speedData<maxSpeed;
+powerData(~allowedInds) = 0;
+
+% Calculate the effective power under constraints
+if sum(allowedInds) == 0 % if none of the torques meet the contraint
+    % This is an overpowered seastate. Use the max speed and max
+    % torque and the rest will go over relief
+    powCut = maxSpeed * maxTorque;
+    torCut = maxTorque;
+    speCut = maxSpeed;
+else % choose the max power within these constraints
+    [powCut,cutInd] = max(powerData);
+    torCut = torqueData(cutInd);
+    speCut = speedData(cutInd);
+end
+
+% You can click through these plots if you want to
+if 0
+    figure, plot(torqueData,powerData4Plot,[maxTorque,maxTorque],[min(powerData4Plot), max(powerData4Plot)],torqueData,maxSpeed*torqueData,torCut,powCut,'*')
+    ylim([min(powerData4Plot), max(powerData4Plot)])
+    xlabel('Torque [Nm]'), ylabel('Power [W]'), grid
+    a=1;
 end
 
 end
