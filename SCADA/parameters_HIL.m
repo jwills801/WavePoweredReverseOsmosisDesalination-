@@ -85,7 +85,7 @@ function par = parameters_HIL(par)
     switch 1
         case 1 % P
             par.H1T.kp = ku*(0.5);
-            par.H1T.ki = ku/Tu*(0.1);
+            par.H1T.ki = ku/Tu*(0.1); par.H1T.ki = 0;
             par.H1T.kd = ku*Tu*(0);
         case 2 % PI
             par.H1T.kp = ku*(0.45);
