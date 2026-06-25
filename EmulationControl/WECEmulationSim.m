@@ -9,7 +9,7 @@ beta = 1.8e9;
 V_cap = A_cap*0.25;
 V_rod = A_rod*0.25;
 D = 53.8 * 100^-3; % [m^3/rev]
-omega = 3500 /60; % [rev/s]
+omega = 1500 /60; % [rev/s]
 
 tau = .1; % time constant of swash plate
 ku = 1;
@@ -72,12 +72,12 @@ subplot(222), plot(t,y(:,2),params.t,params.xdotdes), grid, legend('Actual','Des
 subplot(223), plot(t,y(:,3:4)), grid, legend('Cap','Rod')
 subplot(224), plot(t,y(:,5))
 
-% [t2,y2] = forwardEuler(@func,x0,params,tf,1e-5);
-% figure
-% subplot(221), plot(t2,y2(:,1),params.t,params.xdes), grid, legend('Actual','Desired')
-% subplot(222), plot(t2,y2(:,2),params.t,params.xdotdes), grid, legend('Actual','Desired')
-% subplot(223), plot(t2,y2(:,3:4)), grid, legend('Cap','Rod')
-% subplot(224), plot(t2,y2(:,5))
+[t2,y2] = forwardEuler(@func,x0,params,tf,1e-5);
+figure
+subplot(221), plot(t2,y2(:,1),params.t,params.xdes), grid, legend('Actual','Desired')
+subplot(222), plot(t2,y2(:,2),params.t,params.xdotdes), grid, legend('Actual','Desired')
+subplot(223), plot(t2,y2(:,3:4)), grid, legend('Cap','Rod')
+subplot(224), plot(t2,y2(:,5))
 
 function dxdt = func(t,x,params)
 d_bore_act = (6)*0.0254; % [in -> m]
