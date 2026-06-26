@@ -25,18 +25,19 @@ params.D = 53.8 * 100^-3; % [m^3/rev]
 params.omega = 1500 /60; % [rev/s]
 
 % Hydrostatic charge pressure
-params.charge = 2.5e6;
+params.charge = 2.6e6;
 
 params.swashTimeConstant = .3; % [s]
 
 % Disturbance force
 load ../Data_20260624.mat
 params.disturbance.time = out.p_AC.Time;
-P_cap = out.p_cap.Data;
-P_rod = out.p_rod.Data(1:100:end);
+% The cap and rod were mislabeled in this trial
+P_rod = out.p_cap.Data;
+P_cap = out.p_rod.Data(1:100:end);
     d_rod_pump = (3.5)*0.0254; % [in -> m] diameter of rod
     d_bore_pump = (7)*0.0254; % [in -> m] diameter of bore
     A_cap = pi/4*(d_bore_pump^2);
     A_rod = pi/4*(d_bore_pump^2 - d_rod_pump^2);
-params.disturbance.force = P_cap*A_cap - P_rod*A_rod;
+params.disturbance.force =  P_cap*A_cap - P_rod*A_rod ;
 end
