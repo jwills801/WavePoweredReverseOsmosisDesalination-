@@ -1,34 +1,24 @@
 clear, close all
 params = getParameters;
 
-
-params.control.K = [-22.5 0 0];
-
-ft = 100;
+ft = 50;
 params.traj = makeDesiredTrajectory(ft);
 x0 = [-5/100;0;params.charge;1.3*params.charge;0];
 [t,y] = ode23t(@(t,states) AllDynamics(t,states,params), [0 ft], x0);
 
 %% plots
-plotData
-
-load ../Data_20260624.mat
-time = out.p_AC.Time;
-x = out.x_wp.Data;
-P_cap = out.p_AC.Data;
-P_rod = out.p_BD.Data;
-
-figure
-subplot(311), plot(time,x,t,y(:,1),params.traj.time,params.traj.xdes), grid, legend('Measured','Modeled','Command'), ylabel('Pos [m]')
-subplot(312), plot(time,P_cap/1e6,t,y(:,3)/1e6), grid, ylabel('Cap P [MPa]')% , legend('Measured','Modeled'), ylabel('Cap Pressure [MPa]')
-subplot(313), plot(time,P_rod/1e6,t,y(:,4)/1e6), grid, ylabel('Rod P [MPa]'), xlabel('Time [s]')% , legend('Measured','Modeled'), ylabel('Rod Pressure [MPa]')
-
+u = NaN(size(t));
+for i = 1:length(t), u(i) = Control(t(i),y(i,:),params); end
 
 figure
 subplot(221), plot(t,y(:,1),params.traj.time,params.traj.xdes), grid, legend('Actual','Desired'), ylabel('Pos [m]')
 subplot(222), plot(t,y(:,2),params.traj.time,params.traj.xdotdes), grid, legend('Actual','Desired'), ylabel('Vel [m/s]')
 subplot(223), plot(t,y(:,3:4)/1e6), grid, legend('Cap','Rod'), ylabel('Pressure [MPa]')
-subplot(224), plot(t,y(:,5)), grid, ylabel('Frac. Disp.')
+subplot(224), plot(t,u,t,y(:,5)), grid, ylabel('Frac. Disp.'), legend('Commanded','Actual')
+
+xError = interp1(params.traj.time,params.traj.xdes,t) - y(:,1);
+xDotError = interp1(params.traj.time,params.traj.xdotdes,t) - y(:,2);
+figure, plot(t,xError,t,xDotError), grid, ylabel('Error'), legend("Pos","Vel")
 
 function dxdt = AllDynamics(t,states,params)
 % Force dxdt to be a column vector
@@ -89,7 +79,7 @@ end
 
 function xddot = InertialDynamics(params,t,x,xdot,P_cap,P_rod)
 % Interpolate desired trajectories
-F_disurbance = interp1(params.disturbance.time,params.disturbance.force,t);
+F_disurbance = 0;
 
 % Emulation Force
 F_emulation = params.A_cap*P_cap - params.A_rod*P_rod;
@@ -160,7 +150,7 @@ end
 
 function [Q_purge_cap,Q_purge_rod] = hotOilShuttle(params,cap,rod)
 % Calculate ot oil shuttle opening fraction
-P_shuttle_crack = 5e5; % Centering spring cracking pressure
+P_shuttle_crack = 2e5; % Centering spring cracking pressure
 dP_shuttle_band = 2e5; % Smoothing Transition zone width
 
 % If P_rod exceeds P_cap by more than the spring force, open the cap side

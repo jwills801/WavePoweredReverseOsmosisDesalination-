@@ -16,7 +16,7 @@ params.m = rho_SS * params.A_rod*params.stroke*2; % [kg] mass of both pistons (r
 params.c = 1e5; % [Ns/m]
 
 % Bulk modulus (may be worth doing a pressure dependent beta)
-params.beta = 1.6e9;
+params.beta = 1.8e9;
 
 % Combined displacement of hydraulic pumps
 params.D = 53.8 * 100^-3; % [m^3/rev]
@@ -30,7 +30,7 @@ params.charge = 2.6e6;
 params.swashTimeConstant = .3; % [s]
 
 % Disturbance force
-load ../Data_20260624.mat
+load Data_20260624.mat
 params.disturbance.time = out.p_AC.Time;
 % The cap and rod were mislabeled in this trial
 P_rod = out.p_cap.Data;
@@ -40,4 +40,21 @@ P_cap = out.p_rod.Data(1:100:end);
     A_cap = pi/4*(d_bore_pump^2);
     A_rod = pi/4*(d_bore_pump^2 - d_rod_pump^2);
 params.disturbance.force =  P_cap*A_cap - P_rod*A_rod ;
+
+
+% %%
+% A_c = [0 1 0;
+%     0 -c/m 1/m;
+%     0 -beta/4*(A_cap+A_rod) 0];
+% B_c = [0;0;-beta/2*D*omega];
+% Bd = [0;-1/m;0];
+% 
+% K_c = place(A_c,B_c,[-5,-5+250i,-5-250i])
+% K_c = [-20 0 -3e-6];
+% OL_poles = eig(A_c);
+% CL_poles = eig(A_c-B_c*K_c)
+% 
+% figure, plot(real(OL_poles),imag(OL_poles),'*')
+% figure, plot(real(OL_poles),imag(OL_poles),'*',real(CL_poles),imag(CL_poles),'*'), legend('Open Loop','Closed Loop')
+% grid
 end
